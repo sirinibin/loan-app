@@ -1,113 +1,335 @@
-import Image from 'next/image'
+"use client";
+import Image from "next/image";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [yearEstablished, setYearEstablished] = useState("");
+  const [loanAmount, setLoanAmount] = useState("");
+  const [accountProvider, setAccountProvider] = useState("");
+
+  let [errors, setErrors] = useState({
+    name: "",
+    yearEstablished: "",
+    loanAmount: "",
+    accountProvider: "",
+  });
+
+  useEffect(() => {
+    let data = localStorage.getItem("name");
+    if (data) {
+      setName(data);
+    }
+
+    data = localStorage.getItem("yearEstablished");
+    if (data) {
+      setYearEstablished(data);
+    }
+
+    data = localStorage.getItem("loanAmount");
+    if (data) {
+      setLoanAmount(data);
+    }
+
+    data = localStorage.getItem("accountProvider");
+    if (data) {
+      setAccountProvider(data);
+    }
+  }, []);
+
+  const validateForm = () => {
+    let errors = {
+      name: "",
+      yearEstablished: "",
+      loanAmount: "",
+      accountProvider: "",
+    };
+    let formValid = true;
+
+    if (!name) {
+      errors.name = "Name is required.";
+      formValid = false;
+    }
+
+    if (!yearEstablished) {
+      errors.yearEstablished = "Year Est. is required.";
+      formValid = false;
+    }
+
+    if (!loanAmount) {
+      errors.loanAmount = "Loan amount is required.";
+      formValid = false;
+    }
+
+    if (!accountProvider) {
+      errors.accountProvider = "Account provider is required.";
+      formValid = false;
+    }
+
+    setErrors(errors);
+
+    return formValid;
+  };
+
+  const handleSubmit = (event: any) => {
+    event.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+
+    let data = {
+      business_name: name,
+      year_established: parseInt(yearEstablished),
+      loan_amount: parseFloat(loanAmount),
+      account_provider: accountProvider,
+    };
+
+    let endPoint = "/v1/balance-sheet";
+    let method = "POST";
+
+    const requestOptions = {
+      method: method,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    };
+
+
+    fetch(endPoint, requestOptions)
+      .then(async (response) => {
+        const isJson = response.headers
+          .get("content-type")
+          ?.includes("application/json");
+        const data = isJson && (await response.json());
+
+        // check for error response
+        if (!response.ok) {
+          // get error message from body or default to response status
+          const error = data && data.errors;
+          //const error = data.errors
+          return Promise.reject(error);
+        }
+
+
+        localStorage.setItem(
+          "balanceSheet",
+          JSON.stringify(data.result?.sheets)
+        );
+        localStorage.setItem("name", data.result?.business?.business_name);
+        localStorage.setItem(
+          "yearEstablished",
+          data.result?.business?.year_established
+        );
+        localStorage.setItem("loanAmount", data.result?.business?.loan_amount);
+        localStorage.setItem(
+          "accountProvider",
+          data.result?.business?.account_provider
+        );
+
+        router.push("/review");
+      })
+      .catch((error) => {
+        console.log("Inside catch");
+        console.log(error);
+        console.error("There was an error!", error);
+      });
+  };
+
+
+  const resetForm = () => {
+    setName("");
+    setYearEstablished("");
+    setLoanAmount("");
+    setAccountProvider("");
+    setBalanceSheet([]);
+    localStorage.setItem("balanceSheet", "");
+    localStorage.setItem("name", "");
+    localStorage.setItem("yearEstablished", "");
+    localStorage.setItem("loanAmount", "");
+    localStorage.setItem("accountProvider", "");
+  };
+
+  let [balanceSheet, setBalanceSheet] = useState([
+    {
+      year: 2020,
+      month: 12,
+      profitOrLoss: 250000,
+      assetsValue: 1234,
+    },
+    {
+      year: 2020,
+      month: 11,
+      profitOrLoss: 1150,
+      assetsValue: 5789,
+    },
+    {
+      year: 2020,
+      month: 10,
+      profitOrLoss: 2500,
+      assetsValue: 22345,
+    },
+    {
+      year: 2020,
+      month: 9,
+      profitOrLoss: -187000,
+      assetsValue: 223452,
+    },
+  ]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
+    <main className="flex min-h-screen flex-col items-center">
+      <div className="min-h-screen p-6 bg-gray-100 flex items-center justify-center">
+        <div className="container max-w-screen-lg mx-auto">
+          <div>
+            <h2 className="font-semibold text-xl text-gray-600">Loan App</h2>
+            <p className="text-gray-500 mb-6">Apply for loan</p>
+
+            <div className="bg-white rounded shadow-lg p-4 px-4 md:p-8 mb-6">
+              <div className="grid gap-4 gap-y-2 text-sm grid-cols-1 lg:grid-cols-3">
+                <div className="text-gray-600  p-2 bg-sky-300 cursor-pointer">
+                  <p className="font-medium text-lg">1.Business details</p>
+                  <p>Please fill out all the fields.</p>
+                </div>
+                <div className="text-gray-600 p-2">
+                  <p className="font-medium text-lg">2.Review</p>
+                  <p>Please review all details</p>
+                </div>
+
+                <div className="text-gray-600 p-2">
+                  <p className="font-medium text-lg">3.Outcome</p>
+                  <p>Final outcome</p>
+                </div>
+
+                <div className="lg:col-span-3">
+                  <div className="grid gap-4 gap-y-2 text-sm grid-cols-1 md:grid-cols-5">
+                    <div className="md:col-span-5">
+                      <label htmlFor="full_name">Business Name</label>
+                      <input
+                        type="text"
+                        name="full_name"
+                        defaultValue=""
+                        value={name}
+                        onChange={(e) => {
+                          errors.name = "";
+                          if (!e.target.value) {
+                            errors.name = "Name is required.";
+                          }
+                          setName(e.target.value);
+                        }}
+                        id="full_name"
+                        className="h-10 border mt-1 rounded px-4 w-full bg-gray-50"
+                        placeholder="ABC LTD."
+                      />
+                      {errors.name && (
+                        <p style={{ color: "red" }}>{errors.name}</p>
+                      )}
+                    </div>
+                    <div className="md:col-span-5">
+                      <label htmlFor="email">Year Est.</label>
+                      <input
+                        type="number"
+                        name="year"
+                        value={yearEstablished}
+                        onChange={(e) => {
+                          errors.yearEstablished = "";
+                          if (!e.target.value) {
+                            errors.yearEstablished = "Year Est. is required.";
+                          }
+                          setYearEstablished(e.target.value);
+                        }}
+                        className="h-10 border mt-1 rounded px-4 w-full bg-gray-50"
+                        placeholder="2010"
+                      />
+                      {errors.yearEstablished && (
+                        <p style={{ color: "red" }}>{errors.yearEstablished}</p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-5">
+                      <label htmlFor="email">Loan Amont</label>
+                      <input
+                        type="number"
+                        name="amount"
+                        value={loanAmount}
+                        onChange={(e) => {
+                          errors.loanAmount = "";
+                          if (!e.target.value) {
+                            errors.loanAmount = "Loan Amount is required.";
+                          }
+                          setLoanAmount(e.target.value);
+                        }}
+                        className="h-10 border mt-1 rounded px-4 w-full bg-gray-50"
+                        placeholder="10000"
+                      />
+                      {errors.loanAmount && (
+                        <p style={{ color: "red" }}>{errors.loanAmount}</p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-5">
+                      <label htmlFor="address">Account provider</label>
+                      <select
+                        value={accountProvider}
+                        onChange={(e) => {
+                          errors.accountProvider = "";
+                          if (!e.target.value) {
+                            errors.accountProvider =
+                              "Account provider is required.";
+                          }
+                          setAccountProvider(e.target.value);
+                        }}
+                        className="h-10 border mt-1 rounded px-4 w-full bg-gray-50"
+                      >
+                        <option value="">Select</option>
+                        <option value="xero">Xero</option>
+                        <option value="myob">MYOB</option>
+                      </select>
+                      {errors.accountProvider && (
+                        <p style={{ color: "red" }}>{errors.accountProvider}</p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-5 text-right">
+                      <div className="inline-flex items-start mr-4">
+                        <button
+                          onClick={resetForm}
+                          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className="inline-flex items-end">
+                        <button
+                          onClick={handleSubmit}
+                          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        >
+                          Submit
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            href="https://www.buymeacoffee.com/dgauderman"
             target="_blank"
-            rel="noopener noreferrer"
+            className="md:absolute bottom-0 right-0 p-4 float-right"
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+            <img
+              src="https://www.buymeacoffee.com/assets/img/guidelines/logo-mark-3.svg"
+              alt="Buy Me A Coffee"
+              className="transition-all rounded-full w-14 -rotate-45 hover:shadow-sm shadow-lg ring hover:ring-4 ring-white"
             />
           </a>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
     </main>
-  )
+  );
 }
