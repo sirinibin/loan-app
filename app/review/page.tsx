@@ -245,11 +245,11 @@ export default function Review(props: any) {
                               >
                                 {sheet.year}
                               </th>
-                              <td className="px-6 py-4">S {sheet.month}</td>
+                              <td className="px-6 py-4">{sheet.month}</td>
                               <td className="px-6 py-4 bg-gray-50 dark:bg-gray-800">
-                                {sheet.profitOrLoss}
+                                {"$"+sheet.profitOrLoss}
                               </td>
-                              <td className="px-6 py-4">{sheet.assetsValue}</td>
+                              <td className="px-6 py-4">{"$"+sheet.assetsValue}</td>
                             </tr>
                           ))}
                       </tbody>
